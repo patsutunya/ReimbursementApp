@@ -30,7 +30,7 @@ function submitReceipts(receipt_item_id, description, amount, status){
             receipt_item_id: receipt_item_id,
             description: description,
             amount: amount,
-            status: 'pending'
+            status: "status"
 
         }
     }
@@ -57,6 +57,9 @@ function deleteReceiptByID(receipt_item_id){
 
     return documentClient.delete(params).promise();
 }
+
+
+
 module.exports = {
                     getAllReceipts, submitReceipts, deleteReceiptByID,
                     getReceiptByID

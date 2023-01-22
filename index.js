@@ -1,7 +1,8 @@
 
 const { getUserByUsername, getAllUserName } = require('./dao/login');
 const { newUserRegistered } = require('./dao/register');
-const { getAllReceipts, submitReceipts, getReceiptByID, deleteReceiptByID } = require('./dao/receipt');
+const { getAllReceipts, submitReceipts, getReceiptByID, deleteReceiptByID} = require('./dao/receipt');
+const { handlerReceiptByID, updateReceiptByID} = require('./dao/receiptHandler');
 
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -47,7 +48,7 @@ app.post('/login', async (req, res) => {
 
     } else {
 
-        res.statusCode = 404;
+        res.statusCode = 409;
         res.send({ 'message': `${username} is not registered, please go to register page` });
     }
 
@@ -55,7 +56,6 @@ app.post('/login', async (req, res) => {
 
 
 app.post('/register', async (req, res) => {
-
 
     try {
 
@@ -68,7 +68,7 @@ app.post('/register', async (req, res) => {
 
             if (newUser.username === username) {
 
-                res.statusCode = 404;
+                res.statusCode = 409;
                 res.send({ 'message': 'The user name is taken, please try again' });
 
             }
@@ -90,7 +90,7 @@ app.get('/receipts', async (req, res) => {
 
     try {
 
-        let data = await getAllReceipts();
+        let data = await getAllReceipts(req.params.id);
         res.send(data.Items);
     } catch (err) {
 
@@ -154,6 +154,55 @@ app.delete('/receipt/:id', async (req, res) => {
 
 
 })
+
+app.get('/receiptItem/:id',  async (req, res) => {
+
+    try {
+
+        let data = await handlerReceiptByID(req.params.id)
+        if (data.Item){
+            res.send(data.Item)
+        } else {
+            res.statusCode = 404;
+            res.send({'message': `Receipt with id ${req.params.id} is not exist`});
+        }
+
+    } catch (err){
+        res.statusCode = 500;
+        res.send({'message': err});
+    }
+    
+});
+
+app.patch('/receiptItem/:id/status', async (req, res) => {
+
+    try {
+
+        let data = await handlerReceiptByID(req.params.id);
+        if (data.Item){
+
+          await updateReceiptByID(req.params.id, req.body.status);
+
+                res.statusCode = 200;
+                res.send({'message': `Successfully dated status of receipt id ${req.params.id}`})
+        
+
+        } else {
+            
+            res.statusCode = 400;
+            res.send({'message': `Item is not exist with id ${req.params.id}`})
+        }
+
+        
+
+    } catch (err){
+        res.statusCode = 500;
+        res.send({'message': err})
+    }
+
+})
+
+
 
 app.listen(PORT, () => {
     console.log(`Server listen to port ${PORT}`);
