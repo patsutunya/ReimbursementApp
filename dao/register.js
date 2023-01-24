@@ -9,7 +9,7 @@ aws.config.update({
 const documentClient = new aws.DynamoDB.DocumentClient();
 
 
-function newUserRegistered (username, password, role) {
+function newUserRegistered (username, password) {
 
    const params = {
 
@@ -18,6 +18,7 @@ function newUserRegistered (username, password, role) {
         username: username,
         password: password,
         role: "associate"
+       
     }
      
    }

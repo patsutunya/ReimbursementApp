@@ -1,5 +1,6 @@
 
 const aws = require('aws-sdk');
+const { resolve, reject } = require('bluebird');
 
 
 aws.config.update({
@@ -20,7 +21,7 @@ function getAllReceipts(receipt_item_id ){
     return documentClient.scan(params).promise();
 }
 
-function submitReceipts(receipt_item_id, description, amount, status){
+function submitReceipts(receipt_item_id, description, amount, username){
 
     const params = {
 
@@ -30,11 +31,14 @@ function submitReceipts(receipt_item_id, description, amount, status){
             receipt_item_id: receipt_item_id,
             description: description,
             amount: amount,
-            status: "status"
+            username: username,
+            role: "associate",
+            status: "pending"
 
         }
     }
 
+    
     return documentClient.put(params).promise();
 }
 
