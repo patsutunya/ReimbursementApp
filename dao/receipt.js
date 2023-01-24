@@ -31,7 +31,7 @@ function submitReceipts(receipt_item_id, description, amount, username){
             receipt_item_id: receipt_item_id,
             description: description,
             amount: amount,
-            username: username,
+            submitter: username,
             role: "associate",
             status: "pending"
 

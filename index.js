@@ -111,11 +111,26 @@ app.post('/submit', async (req, res) => {
 
     try {
 
-        await submitReceipts(uuid.v4(), req.body.description, req.body.amount, req.body.username, req.body.role);
-        res.send({ 'message': 'Successfully Submitted' });
+           const authorizationHeader = req.headers.authorization;
+           const token = authorizationHeader.split(" ")[1];
+           const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token); 
+
+           if (tokenPayload.role === 'associate') {
+            await submitReceipts(uuid.v4(), req.body.description, req.body.amount, req.body.username, req.body.role);
+            res.send({ 'message': 'Successfully Submitted' });
+           }
+      
     } catch (err) {
-        res.statusCode = 500;
-        res.send({ 'message': err });
+           
+        if (err.name === 'JsonWebTokenError'){
+            res.statusCode = 400;
+            res.send({'message': 'Invalid JWT'});          
+        } else if (err.name === 'TypeError'){
+            res.statusCode = 400;
+            res.send({'message': 'No authorization header provided'})
+        } else {
+            res.statusCode = 500;
+        }
     }
 
 });
@@ -167,8 +182,8 @@ app.get('/receiptItem/:id', async (req, res) => {
     try {
 
         let data = await handlerReceiptByID(req.params.id)
-        if (data.Items) {
-            res.send(data.Items)
+        if (data.Item) {
+            res.send(data.Item)
         } else {
             res.statusCode = 404;
             res.send({ 'message': `Receipt with id ${req.params.id} is not exist` });
@@ -185,26 +200,38 @@ app.patch('/receiptItem/:id/status', async (req, res) => {
 
     try {
 
-        let data = await handlerReceiptByID(req.params.id);
+       
+        const authorizationHeader = req.headers.authorization
+        const token = authorizationHeader.split(" ")[1];
+        const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token)
 
-        if (data.Items) {
+        if (tokenPayload.role === 'manager'){
+            let data = await handlerReceiptByID(req.params.id);
+        if (data.Item) {
 
             await updateReceiptByID(req.params.id, req.body.status);
-
             res.statusCode = 200;
             res.send({ 'message': `Successfully updated status of receipt id ${req.params.id}` })
-
-
         } else {
-
             res.statusCode = 404;
             res.send({ 'message': `Item is not exist with id ${req.params.id}` })
         }
 
+        }
 
     } catch (err) {
+       if (err.name === 'JsonWebTokenError'){
+        res.statusCode = 401;
+        res.send({'message': 'Invalid JWT'});
+    
+       } else if (err.name === 'TypeError') {
+         
+          res.statusCode = 400;
+          res.send({'message': 'No authorization header provided'});
+
+       } else {
         res.statusCode = 500;
-        res.send({ 'message': err })
+       }
   }
 
 });
@@ -222,7 +249,7 @@ app.get('/receiptItems', async (req, res) => {
 
         } else {
             let data = await handlerReceiptByID();
-            res.send(data.Items);
+            res.send(data.Item);
         }
 
     } catch (err) {
@@ -236,14 +263,14 @@ app.get('/employeeEndPoint', async (req, res) => {
 
     try {
 
-        if (req.query.username) {
+        if (req.query.submitter) {
 
-            let data = await handlerReceiptByUsername(req.query.username);
+            let data = await handlerReceiptByUsername(req.query.submitter);
             res.send(data.Items);
 
         } else {
-            let data = await handlerReceiptByID();
-            res.send(data.Items);
+            let data = await handlerReceiptByID(req.query.submitter);
+            res.send(data.Item);
         }
 
     } catch (err) {
@@ -258,64 +285,35 @@ app.patch('/receiptItem/:id', async (req, res) => {
 
 
     try {
-        const status = req.body.status
-        //const receipt_items = req.body.receipt_items;
-        let data = await handlerReceiptByID(status);
-        let ticket = data.Items[0].status;
-
-        switch (ticket) {
+       
+        let id = req.params.id;
+        let data = await handlerReceiptByID(id);
+        let ticketStatus = data.Item.status;
+  
+       
+        switch (ticketStatus) {
             case 'pending': res.send('This ticket needs to be processed with approved or rejected');
                 break;
-            case 'approved': res.send('This ticket is not allowed being processed twice');
+            case 'approved': res.send('This ticket has been approved and it is not allowed being processed twice');
                 break;
-            case 'rejected': res.send('This ticket is not allowed being processed twice');
+            case 'rejected': res.send('This ticket has been rejected and it is not allowed being processed twice');
                 break;
             default:
 
                 res.statusCode = 200;
 
+          
+              
         }
 
     } catch (err) {
         res.statusCode = 500;
-        res.send({ 'message': err })
+        res.send({ 'message': `${err}` })
     }
 
 });
 
 
-app.post('/reimbursements', async (req, res) => {
-
-    try {
-        const authorizationHeader = req.headers.authorization;
-        const token = authorizationHeader.split(" ")[1];
-        const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token);
-
-        if (tokenPayload.role === 'associate') {
-
-            await submitReceipts(tokenPayload.username, req.body.description, req.body.amount, req.body.receipt_item_id);
-            res.statusCode = 201;
-            res.send({ 'message': 'Successfully Added' });
-
-        } else {
-            res.statusCode = 401;
-            res.send({ 'message': 'You do not have access to this operation' });
-        }
-
-    } catch (err) {
-        if (err.name === 'JsonWebTokenError') {
-            res.statusCode = 400;
-            res.send({ 'message': 'Invalid JWT' })
-        } else if (err.name === 'TypeError') {
-            res.statusCode = 400;
-            res.send({ 'message': 'No authorization header provided' });
-
-        } else {
-            res.statusCode = 500;
-        }
-    }
-
-});
 
 
 app.listen(PORT, () => {

@@ -15,7 +15,7 @@ function handlerReceiptByID (receipt_item_id) {
         Key: { receipt_item_id: receipt_item_id }
     }
 
-    return documentClient.scan(params).promise();
+    return documentClient.get(params).promise();
 
 }
 
@@ -46,40 +46,28 @@ function handlerReceiptByStatus(status){
 }
 
 
-function handlerReceiptByUsername (username){
+function handlerReceiptByUsername (submitter){
 
     const params = {
 
         TableName: 'receipt_items',
-        IndexName: 'username-index',
+        IndexName: 'submitter-index',
         KeyConditionExpression: '#c = :value',
-        ExpressionAttributeNames: {'#c': 'username'},
-        ExpressionAttributeValues: {':value': username}
+        ExpressionAttributeNames: {'#c': 'submitter'},
+        ExpressionAttributeValues: {':value': submitter}
     }
 
     return documentClient.query(params).promise();
 }
 
-function handlerOverrideReceipt (receipt_item_id, status){
 
-    const params = {
-        TableName: 'receipt_items',
-        Item: {
-            receipt_item_id: receipt_item_id,
-            status: status
-            
-        }
 
-    }
-      return documentClient.scan(params).promise();
-}
 
 module.exports = {
 
     handlerReceiptByID,
     updateReceiptByID,
     handlerReceiptByStatus,
-    handlerOverrideReceipt,
     handlerReceiptByUsername,
     
 }
