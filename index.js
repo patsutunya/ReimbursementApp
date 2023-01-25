@@ -3,7 +3,7 @@ const { getUserByUsername, getAllUserName } = require('./dao/login');
 const { newUserRegistered } = require('./dao/register');
 const { getAllReceipts, submitReceipts, getReceiptByID, deleteReceiptByID } = require('./dao/receipt');
 const { handlerReceiptByID, updateReceiptByID, handlerReceiptByStatus,
-        handlerReceiptByUsername } = require('./dao/receiptHandler');
+    handlerReceiptByUsername } = require('./dao/receiptHandler');
 const jwtUtil = require('./utility/jwtToken');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -42,7 +42,7 @@ app.post('/login', async (req, res) => {
         if (userName.password === password) {
 
             res.send({
-                'message': 'Successfully Verified!',
+                'message': 'Successfully Login',
                 'token': jwtUtil.createToken(userName.username, userName.role)
             });
 
@@ -111,23 +111,23 @@ app.post('/submit', async (req, res) => {
 
     try {
 
-           const authorizationHeader = req.headers.authorization;
-           const token = authorizationHeader.split(" ")[1];
-           const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token); 
+        const authorizationHeader = req.headers.authorization;
+        const token = authorizationHeader.split(" ")[1];
+        const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token);
 
-           if (tokenPayload.role === 'associate') {
+        if (tokenPayload.role === 'associate') {
             await submitReceipts(uuid.v4(), req.body.description, req.body.amount, req.body.username, req.body.role);
             res.send({ 'message': 'Successfully Submitted' });
-           }
-      
+        }
+
     } catch (err) {
-           
-        if (err.name === 'JsonWebTokenError'){
+
+        if (err.name === 'JsonWebTokenError') {
             res.statusCode = 400;
-            res.send({'message': 'Invalid JWT'});          
-        } else if (err.name === 'TypeError'){
+            res.send({ 'message': 'Invalid JWT' });
+        } else if (err.name === 'TypeError') {
             res.statusCode = 400;
-            res.send({'message': 'No authorization header provided'})
+            res.send({ 'message': 'No authorization header provided' })
         } else {
             res.statusCode = 500;
         }
@@ -196,46 +196,55 @@ app.get('/receiptItem/:id', async (req, res) => {
 
 });
 
+
+
+
 app.patch('/receiptItem/:id/status', async (req, res) => {
 
     try {
 
-       
-        const authorizationHeader = req.headers.authorization
+        const authorizationHeader = req.headers.authorization;
         const token = authorizationHeader.split(" ")[1];
         const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token)
 
-        if (tokenPayload.role === 'manager'){
-            let data = await handlerReceiptByID(req.params.id);
-        if (data.Item) {
+        if (tokenPayload.role === 'manager') {
+            let id = req.params.id
+            let data = await handlerReceiptByID(id);
+            let ticketStatus = data.Item.status
 
-            await updateReceiptByID(req.params.id, req.body.status);
-            res.statusCode = 200;
-            res.send({ 'message': `Successfully updated status of receipt id ${req.params.id}` })
-        } else {
-            res.statusCode = 404;
-            res.send({ 'message': `Item is not exist with id ${req.params.id}` })
-        }
+            switch (ticketStatus) {
+                case 'approved': 
+                    res.send({'message': `This ticket id ${req.params.id} has been approved and it is not allowed being processed twice`});
+                    break;
+                case 'rejected': 
+                    res.send({'message': `This ticket id ${req.params.id} has been rejected and it is not allowed being processed twice`});
+                    break;
+                case 'pending': 
+                    await updateReceiptByID(req.params.id, req.body.status)      
+                    res.send({ 'message': `Successfully updated status of receipt id ${req.params.id}`});    
+                    break;     
 
+                default:
+                    res.statusCode = 200;
+            }
         }
 
     } catch (err) {
-       if (err.name === 'JsonWebTokenError'){
-        res.statusCode = 401;
-        res.send({'message': 'Invalid JWT'});
-    
-       } else if (err.name === 'TypeError') {
-         
-          res.statusCode = 400;
-          res.send({'message': 'No authorization header provided'});
 
-       } else {
-        res.statusCode = 500;
-       }
-  }
+        if (err.name === 'JsonWebTokenError') {
+            res.statusCode = 401;
+            res.send({ 'message': 'Invalid JWT' });
 
+        } else if (err.name === 'TypeError') {
+
+            res.statusCode = 400;
+            res.send({ 'message': `This ticket does not exist` });            
+
+        } else {
+            res.statusCode = 500;
+        }
+    }
 });
-
 
 
 app.get('/receiptItems', async (req, res) => {
@@ -281,37 +290,6 @@ app.get('/employeeEndPoint', async (req, res) => {
 });
 
 
-app.patch('/receiptItem/:id', async (req, res) => {
-
-
-    try {
-       
-        let id = req.params.id;
-        let data = await handlerReceiptByID(id);
-        let ticketStatus = data.Item.status;
-  
-       
-        switch (ticketStatus) {
-            case 'pending': res.send('This ticket needs to be processed with approved or rejected');
-                break;
-            case 'approved': res.send('This ticket has been approved and it is not allowed being processed twice');
-                break;
-            case 'rejected': res.send('This ticket has been rejected and it is not allowed being processed twice');
-                break;
-            default:
-
-                res.statusCode = 200;
-
-          
-              
-        }
-
-    } catch (err) {
-        res.statusCode = 500;
-        res.send({ 'message': `${err}` })
-    }
-
-});
 
 
 

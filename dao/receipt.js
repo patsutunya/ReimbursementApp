@@ -1,6 +1,6 @@
 
 const aws = require('aws-sdk');
-const { resolve, reject } = require('bluebird');
+const Promise = require('bluebird');
 
 
 aws.config.update({
