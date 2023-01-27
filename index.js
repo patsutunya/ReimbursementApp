@@ -55,8 +55,8 @@ app.post('/login', async (req, res) => {
 
     } else {
 
-        res.statusCode = 409;
-        res.send({ 'message': `${username} is not registered, please go to register page` });
+        res.statusCode = 400;
+        res.send({ 'message': 'Username is invalid' });
     }
 
 });
@@ -75,8 +75,8 @@ app.post('/register', async (req, res) => {
 
             if (newUser.username === username) {
 
-                res.statusCode = 409;
-                res.send({ 'message': 'The user name is taken, please try again' });
+                res.statusCode = 400;
+                res.send({ 'message': 'This user name is taken' });
 
             }
 
@@ -116,7 +116,7 @@ app.post('/submit', async (req, res) => {
         const tokenPayload = await jwtUtil.verifyTokenAndPayLoad(token);
 
         if (tokenPayload.role === 'associate') {
-            await submitReceipts(uuid.v4(), req.body.description, req.body.amount, req.body.username, req.body.role);
+            await submitReceipts(uuid.v4(), req.body.description, req.body.amount, tokenPayload.username, req.body.role);
             res.send({ 'message': 'Successfully Submitted' });
         }
 
@@ -162,11 +162,11 @@ app.delete('/receipt/:id', async (req, res) => {
 
         if (data.Item) {
             await deleteReceiptByID(req.params.id);
-            res.send({ 'message': `Successfully deleted receipt with id ${req.params.id}` });
+            res.send({ 'message': `Successfully deleted receipt` });
         } else {
 
             res.statusCode = 404;
-            res.send({ 'message': `Item does not exist to be deleted with id ${req.params.id}` });
+            res.send({ 'message': `Item does not exist` });
         }
 
     } catch (err) {
